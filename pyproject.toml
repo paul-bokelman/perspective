@@ -1,0 +1,30 @@
+[project]
+name = "perspective"
+version = "0.1.0"
+description = "Get some damn perspective."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+    "espeakng==1.0.3",
+    "google>=3.0.0",
+    "google-genai>=1.31.0",
+    "hnswlib>=0.8.0",
+    "ipython>=9.5.0",
+    "kokoro>=0.9.2",
+    "munch>=4.0.0",
+    "numpy>=2.3.2",
+    "ollama>=0.5.3",
+    "phonemizer>=3.3.0",
+    "pillow>=11.3.0",
+    "pip>=25.2",
+    "pyaudio>=0.2.14",
+    "pyyaml>=6.0.2",
+    "scipy>=1.16.1",
+    "setuptools>=80.9.0",
+    "sounddevice>=0.5.2",
+    "soundfile>=0.13.1",
+    "textual>=6.1.0",
+    "torch>=2.8.0",
+    "transformers>=4.56.1",
+]

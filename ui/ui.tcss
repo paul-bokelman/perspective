@@ -1,0 +1,82 @@
+/* ---------------------------------- main ---------------------------------- */
+
+#main {
+    layout: grid;
+    grid-size: 3;
+}
+
+#right {
+    column-span: 2;
+    row-span: 2;
+}
+
+.grid-container {
+    height: 100%;
+    border: round #ffffff15;
+    padding: 0 1;
+}
+
+.grid-container .grid-container-title {
+    color: #ffffff40;
+    text-style: italic;
+}
+
+.grey {
+    color: #ffffff40;
+}
+
+/* ------------------------ persona selection partial ----------------------- */
+
+PersonaSelectionPartial {
+    padding: 1;
+    align: center middle;
+}
+
+PersonaSelectionPartial > #persona-selection-main-container {
+    layout: grid;
+    width: 60%;
+    height: 50%;
+    grid-size: 2;
+}
+
+
+PersonaSelectionPartial > #persona-selection-container {
+    border: round #ffffff15;
+    padding: 0 1;
+    width: 50%;
+    height: 50%;
+}
+
+PersonaSelectionPartial #persona-selection-title {
+    color: #ffffff40;
+    text-style: italic;
+}
+
+PersonaSelectionPartial #persona-option-list {
+    height: 80%;
+    width: 100%;
+    border: solid transparent;
+    background: transparent;
+    color: #ffffff90;
+}
+
+PersonaSelectionPartial #persona-option-list > Option {
+    margin: 1;
+}
+
+PersonaSelectionPartial #persona-option-list > .option-list--option-highlighted {
+    background: #ffffff15;
+    color: white;
+}
+
+PersonaSelectionPartial #persona-option-list > .option-list--option-hover {
+    background: #ffffff05;
+    color: white;
+}
+
+/* ---------------------------- header and footer --------------------------- */
+
+# Header {
+#     background: #ffffff10;
+#     color: white;
+# }

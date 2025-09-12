@@ -9,17 +9,10 @@ from models.sts import STSPipeline
 from agent import persona
 import random
 
-personas = persona.load_local_personas()
-sts_pipeline = STSPipeline()
-
 text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
 
 global streaming_text_index
 streaming_text_index = 0
-
-initial_persona_key = list(personas.keys())[0]
-selected_persona = personas[initial_persona_key]
-
 class PerspectiveApp(App):
     TITLE = "Perspective"
     CSS_PATH = "ui/ui.tcss"
@@ -32,13 +25,20 @@ class PerspectiveApp(App):
         # ("h", "help", "Show Help"),
     ]
 
+    def __init__(self):
+        super().__init__()
+        self.personas = persona.load_local_personas()
+        self.sts_pipeline = STSPipeline()
+        self.initial_persona_key = list(self.personas.keys())[0]
+        self.selected_persona = self.personas[self.initial_persona_key]
+
     def compose(self) -> ComposeResult:
         yield Header(name="Perspective", icon="🧠", show_clock=True)
 
         with Container(id="main"):
             with Container(id="tl", classes="grid-container"):
                 yield Static("PERSONA", classes="grid-container-title")
-                yield PersonaInfoPartial(persona=selected_persona, id="active-persona-info-partial")
+                yield PersonaInfoPartial(persona=self.selected_persona, id="active-persona-info-partial")
             with Container(id="right", classes="grid-container"):
                 yield Static("SYSTEM", classes="grid-container-title")
                 with Vertical():
@@ -77,20 +77,20 @@ class PerspectiveApp(App):
 
     def action_toggle_listening(self) -> None:
         """Toggle listening state"""
-        if not sts_pipeline.listening:
-            sts_pipeline.start_listening()
-        else:
-            sts_pipeline.stop_listening()
+        # if not self.sts_pipeline.listening:
+        #     self.sts_pipeline.start_listening()
+        # else:
+        #     self.sts_pipeline.stop_listening()
         listening_property = self.query_one("#listening-property", BinaryStateProperty)
         listening_property.state = listening_property.get_next_state()
         listening_property.refresh()
     
     def action_toggle_recording(self) -> None:
         """Toggle recording state"""
-        if not sts_pipeline.recording:
-            sts_pipeline.start_recording()
+        if not self.sts_pipeline.recording:
+            self.sts_pipeline.start_recording()
         else:
-            sts_pipeline.stop_recording()
+            self.sts_pipeline.stop_recording()
 
         recording_indicator = self.query_one("#recording-indicator", StateIndicator)
         recording_indicator.state = recording_indicator.get_next_state()
@@ -99,12 +99,12 @@ class PerspectiveApp(App):
     def action_switch_persona(self) -> None:
         """Switch between personas"""
         if not self.query("#persona-selection-partial"):
-            self.mount(PersonaSelectionPartial(personas=personas, id="persona-selection-partial"))
+            self.mount(PersonaSelectionPartial(personas=self.personas, id="persona-selection-partial"))
 
     def action_custom_quit(self) -> None:
         """A custom action that performs cleanup before quitting."""
         self.log("Performing custom cleanup before quitting...")
-        sts_pipeline.terminate()
+        self.sts_pipeline.terminate()
         self.exit() 
 
     # def action_help(self) -> None:

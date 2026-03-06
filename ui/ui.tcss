@@ -3,6 +3,8 @@
 #main {
     layout: grid;
     grid-size: 3;
+    background: black;
+    color: #C1C1C1;
 }
 
 #right {
@@ -12,7 +14,7 @@
 
 .grid-container {
     height: 100%;
-    border: round #ffffff15;
+    border: round #ffffff18;
     padding: 0 1;
 }
 
@@ -30,12 +32,14 @@
 PersonaSelectionPartial {
     padding: 1;
     align: center middle;
+    background: black;
+    color: #c1c1c1;
 }
 
 PersonaSelectionPartial > #persona-selection-main-container {
     layout: grid;
-    width: 60%;
-    height: 50%;
+    width: 80%;
+    height: 60%;
     grid-size: 2;
 }
 
@@ -76,7 +80,23 @@ PersonaSelectionPartial #persona-option-list > .option-list--option-hover {
 
 /* ---------------------------- header and footer --------------------------- */
 
-# Header {
-#     background: #ffffff10;
-#     color: white;
-# }
+Footer {
+    background: black;
+}
+
+/* -------------------------- conversation partial -------------------------- */
+
+ConversationHistoryPartial > #conversation-history-container {
+    scrollbar-background: #ffffff05;
+    scrollbar-color: #888888;
+    scrollbar-size-vertical: 1;
+    scrollbar-gutter: stable;
+}
+
+ConversationHistoryPartial > #conversation-history-container > ConversationMessage {
+    margin: 1 0;
+}
+
+ConversationHistoryPartial > #conversation-history-container > ConversationMessage > :first-child {
+    margin: 0 0;
+}

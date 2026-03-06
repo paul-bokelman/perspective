@@ -1,8 +1,8 @@
 from typing import Any
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import yaml
 import os
-import agent.constants as constants
+from agent import utils, constants
 
 @dataclass
 class Temperament:
@@ -20,20 +20,20 @@ class Temperament:
         return True
 
     def __str__(self) -> str:
-        return f"Openness: {self.openness}, Conscientiousness: {self.conscientiousness}, Extraversion: {self.extraversion}, Agreeableness: {self.agreeableness}, Neuroticism: {self.neuroticism}"
+       return "\n".join(f"{field.name.capitalize()}: {getattr(self, field.name)}" for field in fields(self))
 
 @dataclass
 class Persona:
     id: str
     name: str
-    voice: str
     description: str
     temperament: Temperament
     prompt: str
 
 def _load_local_persona(data: dict[str, Any]) -> Persona:
     """Helper function to load a single profile from a dictionary."""
-    temperament_data = data.get("temperament", {})
+    assert "temperament" in data, "Persona must have a temperament section"
+    temperament_data = data["temperament"]
     temperament = Temperament(
         openness=temperament_data.get("openness", 0.5),
         conscientiousness=temperament_data.get("conscientiousness", 0.5),
@@ -41,18 +41,19 @@ def _load_local_persona(data: dict[str, Any]) -> Persona:
         agreeableness=temperament_data.get("agreeableness", 0.5),
         neuroticism=temperament_data.get("neuroticism", 0.5),
     )
-    if not temperament.validate():
-        raise ValueError("Invalid temperament values")
 
-    persona = Persona(
-        id=data.get("id", "unknown"),
-        name=data.get("name", "Unnamed Agent"),
-        voice=data.get("voice", "default"),
-        description=data.get("description", "No description provided."),
+    assert temperament.validate(), "Invalid temperament values"
+    assert "name" in data, "Persona must have a name"
+    assert "description" in data, "Persona must have a description"
+    assert "prompt" in data, "Persona must have a prompt"
+
+    return Persona(
+        id=utils.slugify(data["name"]),
+        name=data["name"],
+        description=data["description"],
         temperament=temperament,
-        prompt=data.get("prompt", ""),
+        prompt=data["prompt"]
     )
-    return persona
 
 def load_local_personas():
     """Load all the agent personas from the local personas directory."""
@@ -63,8 +64,8 @@ def load_local_personas():
             with open(filepath, 'r') as file:
                 data: dict[str, Any] = yaml.safe_load(file)
                 try:
-                    profile = _load_local_persona(data)
-                    personas[profile.id] = _load_local_persona(data)
+                    persona = _load_local_persona(data)
+                    personas[persona.id] = persona
                 except Exception as e:
                     print(f"Error loading {filename}: {e}")
     return personas

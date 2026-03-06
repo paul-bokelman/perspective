@@ -32,10 +32,11 @@ def stream_response(transcription: str, on_start: Callable, on_chunk: Callable[[
         config={
             "response_mime_type": "text/plain", 
             "response_modalities": ["text"],
-            "system_instruction": "You are a helpful assistant that provides detailed and informative responses. You cannot style your responses with markdown in any way!"
+            "system_instruction": "You are a helpful assistant that provides very short and concise answers. Do not style your responses with markdown in any way."
         }
     ):
         on_chunk(chunk)
+        print(chunk.text, end='', flush=True)
     print("\nResponse complete.")
     on_complete()
 

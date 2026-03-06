@@ -8,22 +8,19 @@ class STSPipeline:
     """Full end-to-end speech-to-speech pipeline with continuous listening and memory integration."""
     def __init__(self):
         self.listening = False
-        self.recording = False
-        self.paused = False
         self.stt = stt.SpeechToText()
         self.tts = tts.TextToSpeech()
-
-        # memory worker
         self.memory = Memory()
         self.memory_thread_enabled = False
         self.memory_thread: threading.Thread | None = None
+        self.recording = False
 
     def _memory_worker(self):
         """Background thread: process finalized transcriptions and store in memory."""
         current_chunk = "" # store a string of all transcriptions
 
         # continue processing while thread is enabled and either listening or recording
-        while self.memory_thread_enabled and (self.listening or self.recording):
+        while self.memory_thread_enabled and (self.listening):
             transcription = self.stt.transcription_queue.get()
 
             # no transcription -> skip
@@ -78,26 +75,25 @@ class STSPipeline:
         self._stop_memory_thread()
     
     def start_recording(self):
-        """Start 'recording' audio until stop_recording is called"""
-        # start capturing audio if not capturing (listening)
-        if self.recording:
-            return
-        
-        # no listening -> start stt session
-        if not self.listening:
-            self.stt.start()
-        else: # already listening -> pause memory thread
-            self._stop_memory_thread()
-
+        """Starts transcribing audio if not already started. Memory worker is paused during recording."""
         self.recording = True
+        # start capturing audio if not capturing (listening)
+        # if self.recording:
+        #     return
+        
+        # # no listening -> start stt session
+        # if not self.listening:
+        #     self.stt.start()
+        # else: # already listening -> pause memory thread
+        #     self._stop_memory_thread()
+
+        self.stt.start() # start capturing audio and transcribing
     
     def stop_recording(self):
         """Take the recorded audio transcription and relay to llm & tts"""
-        if not self.recording:
-            return
+        # if not self.recording:
+        #     return
         
-        self.recording = False
-        self.paused = True
         self.stt.stop() # stop capturing audio during processing
 
         # extract all transcriptions from the recording queue
@@ -114,19 +110,17 @@ class STSPipeline:
             on_chunk=self.tts.handle_streaming_chunks,
             on_complete=self.tts.on_complete_streaming_chunks
         )
-        
-        if self.listening:
-            self._start_memory_thread() # resume memory thread if listening
-            
-        self.paused = False
 
+        self.recording = False
+        # if self.listening:
+        #     self._start_memory_thread() # resume memory thread if listening
+            
     def terminate(self):
         """Terminate the entire pipeline, stopping all threads and processes."""
         self.stop_listening()
         self.stop_recording()
-        self.stt.stop()
-        self.tts._stop_kokoro_workers()
-        self.tts._stop_audio_handler_worker()
+        self.stt.terminate()
+        self.tts.terminate()
     
 if __name__ == "__main__":
     import time

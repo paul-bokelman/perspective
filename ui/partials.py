@@ -1,10 +1,13 @@
-from agent.persona import Persona
+from ui.types import ConversationAlertIdentifier
+from textual.binding import BindingType
 from textual.app import ComposeResult
-from textual.widgets import Static, Header, OptionList
+from textual.widgets import Static, OptionList, Footer
 from textual.widget import Widget
-from textual.containers import Container, Vertical
+from textual.containers import Container, Vertical, VerticalScroll
 from textual.widgets.option_list import Option
+from agent.persona import Persona
 from ui.signals import ToggleDisplaySignal, SelectedPersonaSignal
+from ui.components import ConversationMessage, ConversationAlert
 
 # ---------------------------- persona information --------------------------- #
 
@@ -82,31 +85,80 @@ class PersonaSelectionPartial(Widget):
         persona_info_partial = self.query_one("#persona-info-partial", PersonaInfoPartial)
         persona_info_partial.update_persona(persona)
 
-# -------------------------------- help dialog ------------------------------- #
+# ------------------------------ chat container ------------------------------ #
 
-class HelpDialog(Widget):
-    """A partial for displaying help information."""
+class ConversationHistoryPartial(Widget):
+    """A partial for displaying the conversation history."""
 
     def compose(self) -> ComposeResult:
-        help_text = (
-            "[b]Keyboard Shortcuts:[/b]\n"
-            "- [b]L[/b]: Toggle Listening\n"
-            "- [b]R[/b]: Toggle Recording\n"
-            "- [b]S[/b]: Switch Persona\n"
-            "- [b]H[/b]: Show Help\n\n"
-            "[b]Instructions:[/b]\n"
-            "Use the keyboard shortcuts to interact with the application. "
-            "You can switch between different personas, toggle listening and recording states, "
+        with VerticalScroll(id="conversation-history-container"):
+            yield Static("Conversation history will appear here.", id="conversation-history-placeholder", classes="grey")
+
+    def _mount_to_container(self, widget: Widget) -> None:
+        """Simplify mounting a widget to the conversation container and scrolling to the end."""
+        conversation_container = self.query_one("#conversation-history-container", VerticalScroll)
+        conversation_container.mount(widget)
+        conversation_container.scroll_end(animate=False)
+
+    def _remove_placeholder(self) -> None:
+        """Hide the conversation placeholder if it's visible."""
+        placeholder = self.query_one("#conversation-history-placeholder", Static)
+        if placeholder.display:
+            placeholder.display = False
+
+    def add_message(self, sender: str, message: str) -> None:
+        """Add a new message to the conversation history."""
+        self._mount_to_container(ConversationMessage(sender=sender, message=message))
+
+    def add_alert(self, alert: ConversationAlertIdentifier):
+        """Add an alert message to the conversation history."""
+        self._mount_to_container(ConversationAlert(alert=alert))
+
+    def add_message_loader(self) -> None:
+        """Add a loading indicator for the current message being generated."""
+        self._remove_placeholder()
+        self._mount_to_container(ConversationMessage(id="loading-message", sender="derrick", message="", responding=True))
+
+    def remove_message_loader(self) -> None:
+        """Remove the loading indicator for the current message being generated."""
+        conversation_container = self.query_one("#conversation-history-container", VerticalScroll)
+
+        try:
+            conversation_container.query_one("#loading-message", ConversationMessage).remove()
+        except Exception: # NoMatches -> return
+            return
+
+    def flag_last_message_cancelled(self) -> None: # todo: remove in favor of alerts
+        conversation_container = self.query_one("#conversation-history-container", VerticalScroll)
+        last_message = conversation_container.query(ConversationMessage)[-1]
+        last_message.cancelled = True
+        last_message.refresh()
+
+# -------------------------------- help dialog ------------------------------- #
+
+class HelpPartial(Widget):
+    """A partial for displaying help information."""
+
+    def __init__(self, bindings: list[BindingType], **kwargs):
+        super().__init__(**kwargs)
+        self.initial = True
+        self.bindings = bindings
+
+    def compose(self) -> ComposeResult:
+        help_sections = ["[b]Instructions:[/b]"]
+        help_sections.append(
+            "Use the keyboard shortcuts above to interact with the application. "
+            "You can switch between different personas, toggle various states, "
             "and view this help dialog at any time."
+
         )
+        help_sections.append("\n[b]Keyboard Shortcuts:[/b]")
+        for binding in self.bindings:
+            assert isinstance(binding, tuple) and len(binding) == 3, "Binding should be a 3-tuple"
+            help_sections.append(f"- [b]{binding[0]}[/b]: {binding[2]}")
+        
+
+        help_sections.append("\n\nClose this dialog to view the conversation by pressing 'h' again.")
+        
+        help_text = "\n".join(help_sections)
         yield Static(help_text, id="help-dialog-text")
-
-    def on_mount(self) -> None:
-        """Set focus to the help dialog when mounted."""
-        self.post_message(ToggleDisplaySignal("#main"))
-        self.focus()
-
-    def on_key(self, event) -> None:
-        """Close the help dialog on any key press."""
-        self.post_message(ToggleDisplaySignal("#main"))
-        self.remove()

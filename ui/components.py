@@ -1,50 +1,12 @@
-from ui.types import StateIndicatorState
+from ui.types import StateIndicatorState, ConversationAlertIdentifier
+import random
+from datetime import datetime
 from textual.widgets import Static
-    
-# ------------------------------- loading text ------------------------------- #
-
-class LoadingText(Static):
-    """A widget that displays loading text with animated dots."""
-    DEFAULT_CSS = """
-    LoadingText {
-        background: transparent;
-        color: grey;
-    }
-    """
-
-    def __init__(self, text: str = "Loading", dot_count: int = 3, interval: float = 0.5, **kwargs):
-        super().__init__(**kwargs)
-        self.base_text = text
-        self.dot_count = dot_count
-        self.interval = interval
-        self.current_dots = 0
-        self._timer = None
-
-    def on_mount(self) -> None:
-        """Start the animation timer when the widget is mounted."""
-        self._timer = self.set_interval(self.interval, self._update_dots)
-
-    def on_unmount(self) -> None:
-        """Stop the animation timer when the widget is unmounted."""
-        if self._timer:
-            try:
-                self._timer.stop()
-            except Exception:
-                self._timer = None
-
-    def _update_dots(self) -> None:
-        """Update the number of dots and refresh the display."""
-        self.current_dots = (self.current_dots + 1) % (self.dot_count + 1)
-        self.refresh()
-
-    def render(self) -> str:
-        """Render the loading text with the current number of dots."""
-        dots = '.' * self.current_dots
-        return f"{self.base_text}{dots}"
     
 # ------------------------------ state indicator ----------------------------- #
 EnabledDisabledStates = [StateIndicatorState("Enabled", "#00FF00"), StateIndicatorState("Disabled", "grey")]
-RecordingIndicatorStates = [StateIndicatorState("Recording...", "#FF2020", True), StateIndicatorState("Not Recording", "grey")]
+RecordingIndicatorStates = [StateIndicatorState("Not Recording", "grey"), StateIndicatorState("Recording...", "#FF2020", True)]
+ConnectionIndicatorStates = [StateIndicatorState("Connecting...", "#FF5708"), StateIndicatorState("Connected", "#00FF00")]
 
 class StateIndicator(Static):
     def __init__(
@@ -53,6 +15,7 @@ class StateIndicator(Static):
         state: int = 0,
         states: list[StateIndicatorState] = EnabledDisabledStates,
         blink_interval: float = 0.5,
+        locked: bool = False,
     ):
         super().__init__(id=id)
         self.states = states
@@ -62,6 +25,7 @@ class StateIndicator(Static):
         self.blink_interval = blink_interval
         self._blink_visible = True
         self._blink_timer = None
+        self.locked = locked
         
     def on_mount(self) -> None:
         """Start blinking if the initial state requires it."""
@@ -96,7 +60,7 @@ class StateIndicator(Static):
         """Render the current state with appropriate color and blinking."""
         current_state = self.states[self.state]
         dot = " " if current_state.blink and not self._blink_visible else f"[{current_state.color}]●[/{current_state.color}]"
-        return f"{dot} {current_state.label}"
+        return f"{dot} {current_state.label} {'🔒' if self.locked else ''}"
 
     def get_next_state(self) -> int:
         """Helper function to get the next state index."""
@@ -110,6 +74,21 @@ class StateIndicator(Static):
             if self.states[self.state].blink:
                 self._start_blinking()
             self.refresh()
+
+    def toggle_lock(self) -> None:
+        """Toggle the locked status."""
+        self.locked = not self.locked
+        self.refresh()
+
+    def show_lock(self) -> None:
+        """Lock the indicator."""
+        self.locked = True
+        self.refresh()
+
+    def hide_lock(self) -> None:
+        """Unlock the indicator."""
+        self.locked = False
+        self.refresh()
 
 # ----------------------------- dynamic property ----------------------------- #
 
@@ -132,3 +111,53 @@ class BinaryStateProperty(Static):
     def get_next_state(self) -> int:
         """Helper function to get the next state index."""
         return (self.state + 1) % len(self.states)
+    
+# ------------------------------- chat message ------------------------------- #
+
+class ConversationMessage(Static):
+    """A widget that displays a chat message with a sender label."""
+
+    def __init__(self, sender: str, message: str, cancelled: bool = False, responding: bool = False, **kwargs):
+        super().__init__(**kwargs)
+        self.sender = sender
+        self.message = message
+        self.responding = responding
+        self.cancelled = cancelled
+        self.time = datetime.now().strftime("%I:%M %p")
+        self.is_user = sender.lower() == "user"
+
+    @staticmethod
+    def _get_responding_keyword() -> str:
+        return random.choice(["responding", "speaking", "talking", "explaining", "answering"])
+    
+    def get_formatted_message(self) -> str:
+        if self.cancelled:
+            return f"\n[red]\\[CANCELLED][/red]"
+        if self.responding:
+            return f"[grey]is {self._get_responding_keyword()}... [/grey]"
+        return f"\n{self.message}"
+
+    def render(self) -> str:
+        """Render the chat message with sender label."""
+        return f"[grey]\\[{self.time}] {self.sender}[/grey] {self.get_formatted_message()}"
+    
+class ConversationAlert(Static):
+    """A widget that displays an alert message."""
+
+    conversation_alert_color_mappings: dict[ConversationAlertIdentifier, str] = {
+        "cancelled": "#FFD900", 
+        "switched persona": "#00DDFF", 
+        "connected": "#00FF00", 
+        "disconnected": "#FF5708", 
+        "error": "red"
+    }
+
+    def __init__(self, alert: ConversationAlertIdentifier, **kwargs):
+        super().__init__(**kwargs)
+        self.alert: ConversationAlertIdentifier = alert
+        self.time = datetime.now().strftime("%I:%M %p")
+
+    def render(self) -> str:
+        """Render the alert message."""
+        alert_color = self.conversation_alert_color_mappings[self.alert]
+        return f"[grey]\\[{self.time}] [/grey][{alert_color}]\\[{self.alert}][/{alert_color}]"
